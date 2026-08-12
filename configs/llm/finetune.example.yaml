@@ -1,0 +1,22 @@
+# 28B 이하 LLM Fine-tuning의 최소 상위 설정 예시이다.
+experiment:
+  project: ML Training/LLM Fine-tuning
+  name: llm-lora-finetune-example
+dataset:
+  name: instruction_data
+  version: v1
+  train_path: /mnt/ml-data/llm/instruction_data/v1/train
+  valid_path: /mnt/ml-data/llm/instruction_data/v1/valid
+model:
+  framework: transformers
+  name_or_path: <BASE_MODEL_IDENTIFIER>
+training:
+  method: lora
+  max_seq_length: 2048
+  learning_rate: 0.00002
+  epochs: 1
+resource:
+  queue: <CLEARML_QUEUE_NAME>
+  gpu_count: 1
+output:
+  root: llm/finetune/example

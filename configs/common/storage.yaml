@@ -1,0 +1,5 @@
+# 모든 Worker에서 동일하게 보이는 NAS mount root의 기본값이다.
+# ML_DATA_ROOT와 ML_RESULT_ROOT 환경변수가 있으면 코드에서 이 값보다 우선한다.
+storage:
+  data_root: /mnt/ml-data
+  result_root: /mnt/ml-results

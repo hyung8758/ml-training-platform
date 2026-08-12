@@ -1,0 +1,23 @@
+# ClearML Agent를 재부팅 후에도 관리하기 위한 systemd unit 예시이다.
+# 운영 계정과 Repository 배치 경로를 확정한 뒤 /etc/systemd/system에 설치한다.
+[Unit]
+Description=ClearML GPU 학습 Agent
+After=network-online.target docker.service remote-fs.target
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+User=clearml-agent
+Group=clearml-agent
+WorkingDirectory=/opt/ml-training-platform
+Environment="PATH=/opt/clearml-agent-venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
+EnvironmentFile=/etc/ml-training-platform/agent.env
+ExecStart=/opt/ml-training-platform/scripts/start_agent.sh /etc/ml-training-platform/agent.env
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=90
+
+[Install]
+WantedBy=multi-user.target
+

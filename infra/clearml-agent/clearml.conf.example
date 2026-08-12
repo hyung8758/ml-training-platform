@@ -1,0 +1,19 @@
+# ClearML Agent와 SDK가 공통으로 읽는 최소 HOCON 설정 예시이다.
+# 실제 credential은 파일에 직접 쓰지 않고 환경변수에서 가져온다.
+api {
+  api_server: ${CLEARML_API_HOST}
+  web_server: ${CLEARML_WEB_HOST}
+  files_server: ${CLEARML_FILES_HOST}
+  credentials {
+    access_key: ${CLEARML_API_ACCESS_KEY}
+    secret_key: ${CLEARML_API_SECRET_KEY}
+  }
+}
+
+agent {
+  # Container Image는 모델 종류별 Task의 Execution 설정에서 지정한다.
+  # NAS mount와 root 환경변수는 scripts/start_agent.sh가 Worker별로 추가한다.
+  disable_task_docker_override: false
+  docker_force_pull: false
+}
+

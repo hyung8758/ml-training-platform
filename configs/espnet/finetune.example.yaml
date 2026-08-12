@@ -1,0 +1,22 @@
+# 기존 ESPnet 모델을 시작점으로 사용하는 Fine-tuning 상위 설정 예시이다.
+experiment:
+  project: ML Training/ESPnet Fine-tuning
+  name: ko-domain-a-finetune-example
+dataset:
+  name: ko_domain_a
+  version: v1
+  train_path: /mnt/ml-data/asr/ko_domain_a/v1/train
+  valid_path: /mnt/ml-data/asr/ko_domain_a/v1/valid
+base_model:
+  task_id: <CLEARML_BASE_TASK_ID_OR_MODEL_IDENTIFIER>
+model:
+  framework: espnet
+  architecture: conformer
+training:
+  config_path: <ESPNET_RECIPE_CONFIG_PATH>
+  max_epoch: 1
+resource:
+  queue: <CLEARML_QUEUE_NAME>
+  gpu_count: 1
+output:
+  root: asr/espnet-finetune/ko-domain-a-example

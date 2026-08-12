@@ -1,0 +1,20 @@
+# ESPnet Foundation 학습의 상위 설정 예시이며 세부 recipe는 향후 연결한다.
+experiment:
+  project: ML Training/ESPnet Foundation
+  name: ko-general-foundation-example
+dataset:
+  name: ko_general
+  version: v1
+  train_path: /mnt/ml-data/asr/ko_general/v1/train
+  valid_path: /mnt/ml-data/asr/ko_general/v1/valid
+model:
+  framework: espnet
+  architecture: conformer
+training:
+  config_path: <ESPNET_RECIPE_CONFIG_PATH>
+  max_epoch: 1
+resource:
+  queue: <CLEARML_QUEUE_NAME>
+  gpu_count: 1
+output:
+  root: asr/espnet-foundation/ko-general-example
