@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ml-training-platform"
+version = "0.1.0"
+description = "ClearML 기반 머신러닝 학습 실험 관리 플랫폼"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "clearml",
+  "PyYAML",
+]
+
+[project.optional-dependencies]
+# Smoke Test의 PyTorch는 학습 이미지 또는 이 선택 의존성으로 설치한다.
+smoke = ["torch"]
+dev = ["pytest"]
+
+[tool.setuptools.packages.find]
+include = ["jobs*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+

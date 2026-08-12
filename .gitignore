@@ -1,0 +1,50 @@
+# Python 실행 중 생성되는 파일
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+
+# 로컬 환경변수와 ClearML 인증 정보
+.env
+.env.*
+*.env
+!.env.example
+!**/.env.example
+!**/*.env.example
+clearml.conf
+!**/clearml.conf.example
+credentials.json
+*.pem
+*.key
+
+# 데이터셋, 학습 결과, 모델 및 체크포인트
+data/
+dataset/
+datasets/
+results/
+outputs/
+artifacts/
+checkpoints/
+models/
+*.ckpt
+*.pt
+*.pth
+*.safetensors
+*.onnx
+*.bin
+
+# 실제 학습 설정은 사내 GitLab 단계에서 별도 정책으로 관리한다.
+configs/**/*.yaml
+!configs/**/*.example.yaml
+!configs/common/storage.yaml
+
+# IDE와 운영체제 파일
+.idea/
+.vscode/
+.DS_Store
