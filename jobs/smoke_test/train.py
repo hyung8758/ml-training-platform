@@ -24,7 +24,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output", default="smoke-test/latest", help="ML_RESULT_ROOT 하위 경로")
     parser.add_argument(
         "--storage-config",
-        default="configs/common/storage.yaml",
+        default="configs/platform/storage.yaml",
         help="공통 storage 설정 경로",
     )
     return parser.parse_args()

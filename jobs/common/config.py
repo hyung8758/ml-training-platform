@@ -1,5 +1,5 @@
-# YAML 학습 설정을 안전하게 읽고 필수 필드를 검증한다.
-# ClearML Server 없이도 사용할 수 있어 로컬 단위 테스트가 가능하다.
+# YAML 학습 설정을 안전하게 읽고 필수 필드와 Job/Backend 호환성을 검증한다.
+# 플랫폼 정책은 Python에 고정하지 않고 capabilities.yaml에서 읽어 간단하게 관리한다.
 
 from __future__ import annotations
 
@@ -14,17 +14,7 @@ class ConfigError(ValueError):
 
 
 def load_yaml(config_path: str | Path) -> dict[str, Any]:
-    """YAML 파일을 읽어 사전으로 반환한다.
-
-    Args:
-        config_path: 읽을 YAML 파일 경로이다.
-
-    Returns:
-        최상위 값이 mapping인 설정 사전이다.
-
-    Raises:
-        ConfigError: 파일이 없거나 YAML 형식 및 최상위 구조가 잘못된 경우이다.
-    """
+    """YAML 파일을 읽어 사전으로 반환한다."""
     path = Path(config_path).expanduser()
     if not path.is_file():
         raise ConfigError(f"설정 파일을 찾을 수 없습니다: {path}")
@@ -43,18 +33,7 @@ def load_yaml(config_path: str | Path) -> dict[str, Any]:
 
 
 def get_nested(config: Mapping[str, Any], dotted_path: str) -> Any:
-    """점으로 구분한 경로의 값을 조회한다.
-
-    Args:
-        config: 조회할 설정 mapping이다.
-        dotted_path: `experiment.name` 형태의 필드 경로이다.
-
-    Returns:
-        경로에 해당하는 값이다.
-
-    Raises:
-        ConfigError: 중간 또는 마지막 필드가 없을 때 발생한다.
-    """
+    """`experiment.name`처럼 점으로 구분한 설정 경로의 값을 조회한다."""
     current: Any = config
     for part in dotted_path.split("."):
         if not isinstance(current, Mapping) or part not in current:
@@ -64,15 +43,7 @@ def get_nested(config: Mapping[str, Any], dotted_path: str) -> Any:
 
 
 def require_fields(config: Mapping[str, Any], fields: Iterable[str]) -> None:
-    """필수 필드가 존재하고 비어 있지 않은지 검증한다.
-
-    Args:
-        config: 검증할 설정 mapping이다.
-        fields: 점 표기법으로 표현한 필수 필드 목록이다.
-
-    Returns:
-        검증에 성공하면 아무 값도 반환하지 않는다.
-    """
+    """필수 필드가 존재하고 문자열 값이 비어 있지 않은지 검증한다."""
     for field in fields:
         value = get_nested(config, field)
         if value is None or (isinstance(value, str) and not value.strip()):
@@ -80,15 +51,52 @@ def require_fields(config: Mapping[str, Any], fields: Iterable[str]) -> None:
 
 
 def require_positive_number(config: Mapping[str, Any], field: str) -> None:
-    """지정 필드가 0보다 큰 숫자인지 검증한다.
-
-    Args:
-        config: 검증할 설정 mapping이다.
-        field: 점 표기법으로 표현한 숫자 필드이다.
-
-    Returns:
-        검증에 성공하면 아무 값도 반환하지 않는다.
-    """
+    """지정 필드가 0보다 큰 숫자인지 검증한다."""
     value = get_nested(config, field)
     if isinstance(value, bool) or not isinstance(value, (int, float)) or value <= 0:
         raise ConfigError(f"0보다 큰 숫자가 필요합니다: {field}={value!r}")
+
+
+def require_job_type(config: Mapping[str, Any], expected: str) -> None:
+    """Job 진입점과 YAML의 job.type이 서로 일치하는지 확인한다."""
+    actual = get_nested(config, "job.type")
+    if actual != expected:
+        raise ConfigError(f"이 실행 파일은 job.type={expected!r}만 허용합니다: 현재 값={actual!r}")
+
+
+def load_capabilities(
+    config_path: str | Path = "configs/platform/capabilities.yaml",
+) -> dict[str, Any]:
+    """Backend와 Job의 호환 관계를 정의한 플랫폼 정책 YAML을 읽는다."""
+    capabilities = load_yaml(config_path)
+    if not isinstance(capabilities.get("backends"), Mapping):
+        raise ConfigError("capabilities.yaml에는 최상위 backends mapping이 필요합니다.")
+    return capabilities
+
+
+def validate_job_backend(
+    job_type: str,
+    backend_name: str,
+    capabilities: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    """선택한 Job과 Backend 조합이 플랫폼 정책에서 허용되는지 확인한다.
+
+    Returns:
+        선택된 Backend의 capability 설정이다. Docker image 같은 공통 정책 조회에 사용할 수 있다.
+    """
+    backends = capabilities.get("backends")
+    if not isinstance(backends, Mapping) or backend_name not in backends:
+        raise ConfigError(f"등록되지 않은 Backend입니다: {backend_name}")
+
+    backend_config = backends[backend_name]
+    if not isinstance(backend_config, Mapping):
+        raise ConfigError(f"Backend 설정 형식이 잘못되었습니다: {backend_name}")
+    supported_jobs = backend_config.get("jobs")
+    if not isinstance(supported_jobs, list):
+        raise ConfigError(f"Backend의 jobs 목록이 올바르지 않습니다: {backend_name}")
+    if job_type not in supported_jobs:
+        raise ConfigError(
+            f"'{backend_name}' Backend는 '{job_type}' Job을 지원하지 않습니다. "
+            f"capabilities.yaml의 지원 범위를 확인하세요."
+        )
+    return backend_config

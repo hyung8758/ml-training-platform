@@ -37,7 +37,7 @@ def _absolute_root(value: str, variable_name: str) -> Path:
 
 
 def load_storage_roots(
-    config_path: str | Path = "configs/common/storage.yaml",
+    config_path: str | Path = "configs/platform/storage.yaml",
     environ: Mapping[str, str] | None = None,
 ) -> StorageRoots:
     """storage.yaml을 읽고 환경변수 우선순위로 root를 결정한다.

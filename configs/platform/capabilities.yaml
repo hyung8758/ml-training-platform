@@ -1,0 +1,29 @@
+# 각 학습 Backend가 현재 플랫폼에서 어떤 Job을 실행할 수 있는지 정의하는 정책이다.
+# 새 Job 연동을 실제로 구현한 뒤 이 목록에 추가하며, Python 코드에는 호환 관계를 하드코딩하지 않는다.
+backends:
+  espnet:
+    jobs:
+      - stt.foundation
+      - stt.finetune
+    docker:
+      image: ml-platform-espnet
+
+  ms_swift:
+    jobs:
+      - language.llm.finetune
+      - language.embedding.finetune
+    docker:
+      image: ml-platform-ms-swift
+
+  llama_factory:
+    jobs:
+      - language.llm.finetune
+    docker:
+      image: ml-platform-llama-factory
+
+  # PyTorch Lightning은 범용 Backend 골격만 먼저 준비했다.
+  # 실제 Job adapter를 구현한 뒤 필요한 Job만 명시적으로 활성화한다.
+  lightning:
+    jobs: []
+    docker:
+      image: ml-platform-lightning
