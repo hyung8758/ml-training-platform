@@ -30,7 +30,7 @@
 
 `agent-services`는 GPU Worker에 설치하는 일반 Agent가 아니다. Pipeline controller, cleanup, HPO controller처럼 CPU 위주의 관리 작업을 위한 Server 내부 Agent다. 학습 Task를 `services` Queue에 넣지 않는다.
 
-ClearML Server의 live DB는 기본적으로 Server local filesystem의 `/opt/clearml`에 둔다. Dataset과 대용량 학습 결과는 별도 공유 storage를 사용한다. 자세한 분리는 [스토리지 구성](04_스토리지_구성.md)을 참고한다.
+ClearML Server의 live DB는 기본적으로 Server local filesystem의 `/opt/clearml`에 둔다. Dataset과 대용량 학습 결과는 별도 공유 storage를 사용한다. 자세한 분리는 [스토리지 구성](../user-guide/storage_setup.md)을 참고한다.
 
 ## 3. 설치 전에 결정할 값
 
@@ -155,7 +155,7 @@ openssl rand -hex 32
   └─ agent-services: 같은 값으로 API Server 호출
 ```
 
-B/C의 일반 학습 Agent에는 이 값을 복사하지 않는다. 일반 Agent는 Server 기동 후 Web UI에서 발급한 `CLEARML_API_ACCESS_KEY/SECRET_KEY`를 사용한다.
+일반 학습 Agent에는 이 값을 복사하지 않는다. Server와 같은 호스트에서 실행하는 학습 Agent도 다른 Worker와 동일하게 Web UI에서 발급한 `CLEARML_API_ACCESS_KEY/SECRET_KEY`를 사용한다.
 
 ## 8. 공식 Compose 다운로드
 

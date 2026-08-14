@@ -1,47 +1,86 @@
 # ML Training Platform
 
-ClearML 기반의 자체 호스팅 ML 실험 관리 프로젝트이다. 여러 학습 서버의 작업 실행, 실험 기록, 실행 환경 및 공유 스토리지 구성을 하나의 운영 구조로 관리한다.
+ClearML을 중심으로 여러 GPU 학습 서버의 실험을 관리하는 자체 호스팅 학습 플랫폼이다. STT, LLM, Embedding, Reranker처럼 **무엇을 학습하는지(Job)**와 ESPnet, ms-swift, LLaMA-Factory, PyTorch Lightning처럼 **어떤 Framework로 실행하는지(Backend)**를 분리해 확장성과 운영 단순성을 함께 확보한다.
 
-## 목적
+## 핵심 설계
 
-- **실험 중앙 관리**: Task, Queue, 로그, Metric, Artifact 관리
-- **분산 학습 실행**: 여러 Agent에서 Docker 기반 학습 작업 실행
-- **실험 재현성 확보**: Git revision, 설정, Container Image, 실행 결과 기록
-- **스토리지 분리**: Dataset, 학습 결과, ClearML Server 상태 데이터 분리
-- **학습 작업 표준화**: ESPnet, Embedding, LLM 작업의 공통 설정 및 실행 구조 제공
+| 영역 | 역할 |
+| --- | --- |
+| `jobs/` | STT Foundation, LLM Fine-tuning처럼 학습 목적과 업무 흐름 정의 |
+| `backends/` | ESPnet, ms-swift 등 Framework별 명령 구성과 실제 실행 담당 |
+| `configs/` | Job 설정, NAS root, Job/Backend 호환 정책 관리 |
+| `docker/` | Backend별 CUDA/Python/PyTorch/Framework 실행 환경 정의 |
+| `tracking/` | ClearML 중심의 공통 로깅 helper |
+| `infra/` | ClearML Server와 Worker Agent 운영 설정 |
 
-## 시스템 구성
+Job과 Backend를 자유롭게 조합하지 않는다. `configs/platform/capabilities.yaml`에서 허용 관계를 관리하고 Job 실행 직전에 한 번 검증한다. 이 정도의 안전장치만 두고 복잡한 Plugin/Registry 시스템은 도입하지 않는다.
+
+## 전체 흐름
 
 ```text
-사용자
-  └─ ClearML Web UI / SDK
-       └─ ClearML Server
-            ├─ Task / Queue / 실험 이력
-            └─ ClearML Agent
-                 └─ Training Container
-                      ├─ Git 학습 코드
-                      ├─ 공유 Dataset
-                      └─ 공유 Result
+연구원 / ClearML Web UI
+        │
+        ▼
+ClearML Server (Server A)
+ Task / Queue / Log / Metric / Artifact
+        │
+        ▼
+ClearML Agent (Server A/B/C)
+        │
+        ▼
+Job Config
+  ├─ job.type
+  └─ backend.name
+        │
+        ▼
+capabilities.yaml 검증
+        │
+        ▼
+Backend별 Training Container
+        │
+        ├─ ESPnet
+        ├─ ms-swift
+        ├─ LLaMA-Factory
+        └─ PyTorch Lightning
+        │
+        ├─ TensorBoard metric → ClearML
+        └─ Dataset/Checkpoint → NAS
 ```
 
-| 구성 요소 | 역할 |
-| --- | --- |
-| ClearML Server | Web UI, API, Queue, 실험 이력 관리 |
-| ClearML Agent | Queue 감시 및 학습 Container 실행 |
-| Training Container | 모델 학습에 필요한 Python, CUDA, Framework 제공 |
-| Git Repository | 학습 코드, 설정 예제, 실행 진입점 관리 |
-| Shared Storage | Dataset과 학습 결과 공유 |
+## 현재 기본 지원 방향
 
-상세 구조는 [시스템 구조 문서](docs/01_시스템_구조.md)를 참고한다.
+| Job | 기본 Backend | 현재 상태 |
+| --- | --- | --- |
+| STT Foundation | ESPnet | 실행 골격 |
+| STT Fine-tuning | ESPnet | 실행 골격 |
+| LLM Fine-tuning | ms-swift | 실행 골격 |
+| Embedding Fine-tuning | ms-swift | 실행 골격 |
+| LLM Fine-tuning | LLaMA-Factory | 선택 가능한 골격 |
+| 범용 Custom 학습 | PyTorch Lightning | Backend 골격 |
+
+실제 ESPnet/ms-swift/LLaMA-Factory/Lightning 학습 subprocess는 아직 구현하지 않았다. 먼저 ClearML Server/Agent와 Smoke Test를 검증한 뒤 Backend별로 하나씩 연결한다.
+
+## Logging 정책
+
+- **실험 관리의 기준점:** ClearML
+- **Framework 공통 Metric 경로:** 가능한 경우 TensorBoard → ClearML
+- ESPnet, ms-swift, LLaMA-Factory, Lightning의 Framework-native TensorBoard를 우선 활용한다.
+- subprocess 기반 Framework의 TensorBoard 자동 capture는 실제 연동 단계에서 Smoke Test로 확인한다.
+- 문제가 확인되기 전에는 별도 TensorBoard parser를 만들지 않는다.
 
 ## 구축 순서
 
-1. [ClearML Server 구축](docs/02_ClearML_Server_구축.md)
-2. [ClearML Agent 구축](docs/03_ClearML_Agent_구축.md)
-3. [스토리지 구성](docs/04_스토리지_구성.md)
-4. [학습 Task 실행](docs/05_학습_Task_실행_가이드.md)
+1. [시스템 구조](docs/architecture/system_design.md) 확인
+2. [ClearML Server 구축](docs/clearml/server_setup.md)
+3. [ClearML Agent 구축](docs/clearml/agent_setup.md)
+4. [공유 스토리지 구성](docs/user-guide/storage_setup.md)
+5. Smoke Test 실행
+6. [학습 Task 실행 가이드](docs/user-guide/experiment_guide.md)에 따라 Base Task 생성/Clone
+7. ESPnet Backend 실제 연결
+8. ms-swift Backend 실제 연결
+9. 필요 시 LLaMA-Factory / Lightning 연결
 
-GitHub에서 사내 GitLab으로 이전할 때는 [GitHub/GitLab 이관 문서](docs/06_GitHub_GitLab_이관.md)를 참고한다.
+GitHub에서 사내 GitLab으로 이전할 때는 [GitHub/GitLab 이관 문서](docs/user-guide/github_gitlab_migration.md)를 참고한다.
 
 ## 로컬 환경 준비
 
@@ -52,7 +91,7 @@ pip install -e '.[dev,smoke]'
 cp .env.example .env
 ```
 
-`.env`에서 Server 주소와 스토리지 경로를 설정한 후 환경을 검사한다.
+환경변수를 로드한 후 검사한다.
 
 ```bash
 set -a
@@ -66,45 +105,40 @@ pytest
 
 ## Smoke Test
 
-로컬 실행:
-
 ```bash
 ML_RESULT_ROOT=/tmp/ml-smoke-results \
 python -m jobs.smoke_test.train --epochs 3 --output smoke-test/manual
 ```
 
-ClearML 연동 실행 시 다음 항목을 확인한다.
-
-- 실행 장치와 Console 로그
-- epoch별 loss Metric
-- 실행 설정과 Hyperparameter
-- 결과 Artifact
-- `ML_RESULT_ROOT`의 결과 파일
+Smoke Test에서는 GPU/CPU 접근, ClearML Console/Metric, Artifact, NAS 결과 경로가 정상인지 확인한다.
 
 ## Base Task 생성
 
 ```bash
-python scripts/create_base_tasks.py --type espnet-foundation
+python scripts/create_base_tasks.py --type stt-foundation-espnet
+python scripts/create_base_tasks.py --type llm-finetune-ms-swift
 python scripts/create_base_tasks.py --all
 ```
 
-생성한 Task는 ClearML Web UI에서 Clone한 후 Queue에 등록한다.
+생성한 Task는 ClearML Web UI에서 Clone한 뒤 Configuration과 Queue를 수정해 사용한다.
 
-## 디렉터리
+## Repository 구조
 
 ```text
-configs/   학습 설정 예제와 공통 스토리지 설정
-docker/    모델별 Training Image 정의
-docs/      구축 및 운영 문서
-infra/     ClearML Server와 Agent 배포 예제
-jobs/      공통 모듈과 학습 작업 진입점
-scripts/   설치 확인 및 운영 보조 스크립트
-tests/     단위 테스트
+configs/     플랫폼 정책과 Job 설정 예제
+backends/    학습 Framework별 실행 Runner
+jobs/        STT/LLM/Embedding/Reranker 업무 단위 Job
+docker/      Framework별 Training Image
+tracking/    ClearML 중심 공통 tracking helper
+infra/       ClearML Server/Agent 운영 설정
+docs/        시스템/운영/Backend 문서
+scripts/     환경 검사 및 Base Task 생성 도구
+tests/       설정과 Job/Backend 호환성 테스트
 ```
 
-## 설정 관리
+## 저장 정책
 
-- Secret, 실제 `.env`, Dataset, Result, Checkpoint는 Git에 저장하지 않는다.
-- 저장소에는 `.env.example`과 `*.example.yaml`만 등록한다.
-- 실제 서버 주소, 인증 정보, 스토리지 경로는 배포 환경에서 설정한다.
-- Private Repository 인증은 Agent 실행 환경에 별도로 구성한다.
+- 실제 `.env`, API Credential, Dataset, Result, Checkpoint는 Git에 저장하지 않는다.
+- `ML_DATA_ROOT`, `ML_RESULT_ROOT`는 모든 Worker에서 같은 절대 경로로 보이도록 구성한다.
+- Dataset과 대용량 Checkpoint는 NAS에 두고 ClearML에는 실험 설정, Metric, Log, Artifact metadata를 연결한다.
+- 별도 MLflow/RDB/Airflow는 현재 단계에서 추가하지 않는다.

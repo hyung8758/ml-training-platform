@@ -95,7 +95,7 @@ stat "/mnt/ml-results/.write-test-$(hostname)"
 
 ## 5. 프로젝트 설정
 
-기본값은 `configs/common/storage.yaml`에 있다.
+기본값은 `configs/platform/storage.yaml`에 있다.
 
 ```yaml
 storage:

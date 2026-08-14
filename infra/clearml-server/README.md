@@ -1,6 +1,6 @@
-# ClearML Server A 구성
+# ClearML Server 구성
 
-이 디렉터리는 ClearML Server를 재구현하거나 공식 Compose를 복사해 보관하지 않는다. Server A에서는 ClearML이 제공하는 최신 공식 `docker-compose.yml`을 설치 시점에 내려받고, 이 저장소의 파일은 환경값과 필요한 override만 관리한다.
+이 디렉터리는 ClearML Server를 재구현하거나 공식 Compose를 복사해 보관하지 않는다. Server 호스트에서는 ClearML이 제공하는 최신 공식 `docker-compose.yml`을 설치 시점에 내려받고, 이 저장소의 파일은 환경값과 필요한 override만 관리한다.
 
 신규 운영 기준 OS는 Ubuntu Server 24.04 LTS 또는 Docker가 공식 지원하는 64-bit Linux를 권장한다. 기존 OS의 upgrade는 OS 공식 문서와 조직의 backup·rollback 절차를 따른다.
 
@@ -10,7 +10,7 @@
 
 ## 설치 순서
 
-1. Server A에서 `docker --version`, `docker info`, `docker compose version`을 확인한다.
+1. Server 호스트에서 `docker --version`, `docker info`, `docker compose version`을 확인한다.
 2. 공식 문서의 현재 사전 조건과 `vm.max_map_count` 요구를 확인한다.
 3. `/opt/clearml` 같은 운영 디렉터리를 만들고 공식 Compose를 받는다.
 
@@ -21,7 +21,7 @@
    ```
 
 4. 공식 문서에 나온 persistent data/config/log 디렉터리와 소유권을 준비한다. 기존 설치에서 재구축할 때는 문서의 삭제 명령을 그대로 실행하지 말고 반드시 백업 및 복구 계획을 먼저 세운다.
-5. `infra/clearml-server/.env`에서 준비한 값을 권한 `600`의 `/opt/clearml/.env`로 설치한다. 이 파일의 `CLEARML_AGENT_ACCESS_KEY/SECRET_KEY`는 A의 Compose 내부 `agent-services` 전용이며 B/C에는 복사하지 않는다.
+5. `infra/clearml-server/.env`에서 준비한 값을 권한 `600`의 `/opt/clearml/.env`로 설치한다. 이 파일의 `CLEARML_AGENT_ACCESS_KEY/SECRET_KEY`는 Compose 내부 `agent-services` 전용이며 일반 학습 Agent에는 복사하지 않는다.
 6. 별도 변경이 필요할 때만 `docker-compose.override.yml`을 운영 위치로 복사하고 service override를 추가한다.
 7. 공식 Compose를 시작한다.
 
@@ -31,11 +31,11 @@
    docker compose -f docker-compose.yml ps
    ```
 
-8. `http://<SERVER_A>:8080` Web UI와 API `:8008`, File Server `:8081`의 접근을 방화벽 범위 안에서 확인한다.
-9. Web UI에서 사용자 계정과 B/C 각각의 `CLEARML_API_ACCESS_KEY/SECRET_KEY`를 생성한다. 이 값은 각 Worker의 `/etc/ml-training-platform/agent.env`에 둔다.
-10. Server B/C용 `gpu-smoke` Queue를 만들고 Worker credential 및 endpoint를 전달한다.
+8. `http://<CLEARML_SERVER_HOST>:8080` Web UI와 API `:8008`, File Server `:8081`의 접근을 방화벽 범위 안에서 확인한다.
+9. Web UI에서 일반 학습 Agent용 `CLEARML_API_ACCESS_KEY/SECRET_KEY`를 생성한다. 이 값은 각 Worker의 `/etc/ml-training-platform/agent.env`에 둔다.
+10. 초기 검증용 `gpu-smoke` Queue를 만들고 Worker credential 및 endpoint를 전달한다. Server 호스트도 학습에 사용한다면 일반 Agent를 별도로 설치해 같은 방식으로 연결한다.
 
-ClearML live DB/config/log는 Server local filesystem의 `/opt/clearml`에 두고, Dataset과 학습 결과는 환경별 공유 storage에 둔다. 전체 초기 설치 명령은 [Server 구축 문서](../../docs/02_ClearML_Server_구축.md)를 따른다.
+ClearML live DB/config/log는 Server local filesystem의 `/opt/clearml`에 두고, Dataset과 학습 결과는 환경별 공유 storage에 둔다. 전체 초기 설치 명령은 [Server 구축 문서](../../docs/clearml/server_setup.md)를 따른다.
 
 ## 운영 명령
 
