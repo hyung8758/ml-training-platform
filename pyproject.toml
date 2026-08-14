@@ -19,7 +19,7 @@ smoke = ["torch"]
 dev = ["pytest"]
 
 [tool.setuptools.packages.find]
-include = ["jobs*"]
+include = ["jobs*", "backends*", "tracking*"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
