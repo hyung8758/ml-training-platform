@@ -1,14 +1,17 @@
-# Embedding 모델 Fine-tuning의 상위 설정 예시이다.
+# Embedding 모델 Fine-tuning의 공통 상위 설정 예시이며 기본 Backend는 ms-swift이다.
 experiment:
-  project: ML Training/Embedding Fine-tuning
+  project: ML Training/Language/Embedding
   name: embedding-finetune-example
+job:
+  type: language.embedding.finetune
+backend:
+  name: ms_swift
 dataset:
   name: embedding_pairs
   version: v1
   train_path: /mnt/ml-data/embedding/embedding_pairs/v1/train
   valid_path: /mnt/ml-data/embedding/embedding_pairs/v1/valid
 model:
-  framework: sentence-transformers
   name_or_path: <BASE_MODEL_IDENTIFIER>
 training:
   learning_rate: 0.00002

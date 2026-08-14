@@ -1,5 +1,5 @@
-# 연구원이 Web UI에서 Clone할 네 종류의 ClearML Base Task를 생성한다.
-# 같은 프로젝트와 이름의 Task가 있으면 중복 생성을 건너뛴다.
+# 연구원이 ClearML Web UI에서 Clone할 기본 학습 Task를 생성한다.
+# Job과 Backend를 명시한 예제 설정을 사용하며 같은 이름의 Task는 중복 생성하지 않는다.
 
 from __future__ import annotations
 
@@ -29,17 +29,35 @@ class TemplateSpec:
 
 
 TEMPLATES = {
-    "espnet-foundation": TemplateSpec(
-        "ESPnet Foundation", "jobs/espnet/foundation.py", "configs/espnet/foundation.example.yaml", ("espnet", "foundation")
+    "stt-foundation-espnet": TemplateSpec(
+        "STT Foundation / ESPnet",
+        "jobs/stt/foundation.py",
+        "configs/stt/foundation.example.yaml",
+        ("stt", "foundation", "backend:espnet"),
     ),
-    "espnet-finetune": TemplateSpec(
-        "ESPnet Fine-tuning", "jobs/espnet/finetune.py", "configs/espnet/finetune.example.yaml", ("espnet", "finetune")
+    "stt-finetune-espnet": TemplateSpec(
+        "STT Fine-tuning / ESPnet",
+        "jobs/stt/finetune.py",
+        "configs/stt/finetune.example.yaml",
+        ("stt", "finetune", "backend:espnet"),
     ),
-    "embedding-finetune": TemplateSpec(
-        "Embedding Fine-tuning", "jobs/embedding/finetune.py", "configs/embedding/finetune.example.yaml", ("embedding", "finetune")
+    "embedding-finetune-ms-swift": TemplateSpec(
+        "Embedding Fine-tuning / ms-swift",
+        "jobs/language/embedding/finetune.py",
+        "configs/language/embedding/finetune.example.yaml",
+        ("language", "embedding", "finetune", "backend:ms_swift"),
     ),
-    "llm-finetune": TemplateSpec(
-        "LLM Fine-tuning", "jobs/llm/finetune.py", "configs/llm/finetune.example.yaml", ("llm", "finetune", "lora")
+    "llm-finetune-ms-swift": TemplateSpec(
+        "LLM Fine-tuning / ms-swift",
+        "jobs/language/llm/finetune.py",
+        "configs/language/llm/finetune.example.yaml",
+        ("language", "llm", "finetune", "backend:ms_swift"),
+    ),
+    "llm-finetune-llama-factory": TemplateSpec(
+        "LLM Fine-tuning / LLaMA-Factory",
+        "jobs/language/llm/finetune.py",
+        "configs/language/llm/finetune.example.yaml",
+        ("language", "llm", "finetune", "backend:llama_factory"),
     ),
 }
 
@@ -61,12 +79,7 @@ def resolve_repository_url(explicit_url: str | None) -> str:
     elif os.environ.get("ML_TRAINING_REPOSITORY_URL"):
         url = os.environ["ML_TRAINING_REPOSITORY_URL"]
     else:
-        result = subprocess.run(
-            ["git", "config", "--get", "remote.origin.url"],
-            check=False,
-            capture_output=True,
-            text=True,
-        )
+        result = subprocess.run(["git", "config", "--get", "remote.origin.url"], check=False, capture_output=True, text=True)
         url = result.stdout.strip()
     if not url:
         raise RuntimeError("Git URL을 찾을 수 없습니다. --repository 또는 ML_TRAINING_REPOSITORY_URL을 지정하세요.")
@@ -84,6 +97,16 @@ def find_existing_task(task_class: Any, name: str) -> Any | None:
     return None
 
 
+def _config_for_template(spec: TemplateSpec) -> dict[str, Any]:
+    """Template YAML을 읽고 Template tag가 요구하는 Backend override를 반영한다."""
+    with Path(spec.config_path).open("r", encoding="utf-8") as stream:
+        config = yaml.safe_load(stream)
+    backend_tags = [tag for tag in spec.tags if tag.startswith("backend:")]
+    if backend_tags:
+        config.setdefault("backend", {})["name"] = backend_tags[0].split(":", 1)[1]
+    return config
+
+
 def create_template(task_class: Any, key: str, spec: TemplateSpec, repository: str) -> str:
     """ClearML에 draft Base Task 하나를 만들고 Task ID를 반환한다."""
     existing = find_existing_task(task_class, spec.name)
@@ -91,9 +114,7 @@ def create_template(task_class: Any, key: str, spec: TemplateSpec, repository: s
         print(f"[건너뜀] 이미 존재합니다: {spec.name} ({existing.id})")
         return existing.id
 
-    config_file = Path(spec.config_path)
-    with config_file.open("r", encoding="utf-8") as stream:
-        config = yaml.safe_load(stream)
+    config = _config_for_template(spec)
     task = task_class.create(
         project_name=PROJECT_NAME,
         task_name=spec.name,
@@ -104,15 +125,11 @@ def create_template(task_class: Any, key: str, spec: TemplateSpec, repository: s
         argparse_args=[("--config", spec.config_path)],
         add_task_init_call=False,
     )
-    task.set_configuration_object(
-        name="학습 설정",
-        config_dict=config,
-        description=f"기본 설정: {spec.config_path}",
-    )
+    task.set_configuration_object(name="학습 설정", config_dict=config, description=f"기본 설정: {spec.config_path}")
     task.add_tags(["base-task", "향후-구현", *spec.tags])
     task.set_comment(
-        "Web UI에서 Clone하여 설정과 실행 이미지를 지정하는 Base Task입니다. "
-        "현재 실제 모델 학습은 구현되지 않았습니다."
+        "Web UI에서 Clone하여 Job 설정과 실행 Queue를 지정하는 Base Task입니다. "
+        "현재 실제 모델 학습 Backend 실행은 구현 단계 이전의 골격입니다."
     )
     task.flush(wait_for_uploads=True)
     print(f"[생성] {key}: {spec.name} ({task.id})")

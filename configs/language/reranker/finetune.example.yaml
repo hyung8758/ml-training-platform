@@ -1,0 +1,23 @@
+# Reranker Fine-tuning을 향후 연결하기 위한 상위 설정 예시이다.
+experiment:
+  project: ML Training/Language/Reranker
+  name: reranker-finetune-example
+job:
+  type: language.reranker.finetune
+backend:
+  name: ms_swift
+dataset:
+  name: reranker_pairs
+  version: v1
+  train_path: /mnt/ml-data/reranker/reranker_pairs/v1/train
+  valid_path: /mnt/ml-data/reranker/reranker_pairs/v1/valid
+model:
+  name_or_path: <BASE_MODEL_IDENTIFIER>
+training:
+  learning_rate: 0.00002
+  epochs: 1
+resource:
+  queue: <CLEARML_QUEUE_NAME>
+  gpu_count: 1
+output:
+  root: reranker/finetune/example
