@@ -42,7 +42,8 @@ models/
 # 실제 학습 설정은 사내 GitLab 단계에서 별도 정책으로 관리한다.
 configs/**/*.yaml
 !configs/**/*.example.yaml
-!configs/common/storage.yaml
+!configs/platform/storage.yaml
+!configs/platform/capabilities.yaml
 
 # IDE와 운영체제 파일
 .idea/

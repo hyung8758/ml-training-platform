@@ -1,12 +1,14 @@
 # 학습 설정을 ClearML Task에 연결하고 공통 tag를 등록한다.
 # 모델별 Job이 같은 프로젝트 및 설정 기록 규칙을 따르도록 한다.
 
-from __future__ import annotations
 
+from collections.abc import Iterable, Mapping
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import Any
 
+from backends import load_backend_runner
 from jobs.common.config import require_fields
+from tracking import report_execution_plan
 
 
 def initialize_task(
@@ -31,7 +33,9 @@ def initialize_task(
     try:
         from clearml import Task
     except ImportError as error:
-        raise RuntimeError("ClearML SDK가 없습니다. `pip install -e .`를 먼저 실행하세요.") from error
+        raise RuntimeError(
+            "ClearML SDK가 없습니다. `pip install -e .`를 먼저 실행하세요."
+        ) from error
 
     experiment = config["experiment"]
     task = Task.init(
@@ -42,7 +46,9 @@ def initialize_task(
     connected = task.connect_configuration(
         dict(config),
         name="학습 설정",
-        description=f"원본 파일: {config_path}" if config_path else "코드에서 생성한 설정",
+        description=f"원본 파일: {config_path}"
+        if config_path
+        else "코드에서 생성한 설정",
     )
     tags = {"ml-training-platform"}
     tags.update(str(tag) for tag in extra_tags)
@@ -54,3 +60,20 @@ def initialize_task(
     task.add_tags(sorted(tags))
     return task, dict(connected)
 
+
+def execute_backend(
+    task: Any,
+    config: Mapping[str, Any],
+    job_type: str,
+    output_dir: Path,
+) -> None:
+    """검증된 Job 설정으로 Backend command를 기록하고 실행한다."""
+    backend_name = str(config["backend"]["name"])
+    runner = load_backend_runner(backend_name)
+    runner.validate(config)
+    command = runner.build_command(config, output_dir)
+
+    # ClearML 화면에서 실제 선택된 Backend와 실행 계획을 바로 찾을 수 있게 한다.
+    task.add_tags([f"backend:{backend_name}"])
+    report_execution_plan(task, job_type, backend_name, command)
+    runner.run(command)

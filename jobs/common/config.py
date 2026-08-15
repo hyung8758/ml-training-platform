@@ -1,10 +1,10 @@
 # YAML 학습 설정을 안전하게 읽고 필수 필드를 검증한다.
 # ClearML Server 없이도 사용할 수 있어 로컬 단위 테스트가 가능하다.
 
-from __future__ import annotations
 
+from collections.abc import Iterable, Mapping
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import Any
 
 import yaml
 
@@ -92,3 +92,59 @@ def require_positive_number(config: Mapping[str, Any], field: str) -> None:
     value = get_nested(config, field)
     if isinstance(value, bool) or not isinstance(value, (int, float)) or value <= 0:
         raise ConfigError(f"0보다 큰 숫자가 필요합니다: {field}={value!r}")
+
+
+def require_job_type(config: Mapping[str, Any], expected: str) -> None:
+    """실행 파일과 YAML의 Job 식별자가 일치하는지 확인한다."""
+    actual = get_nested(config, "job.type")
+    if actual != expected:
+        raise ConfigError(
+            f"이 실행 파일에는 job.type={expected!r}이 필요합니다: 현재 값={actual!r}"
+        )
+
+
+def load_capabilities(
+    config_path: str | Path = "configs/platform/capabilities.yaml",
+) -> dict[str, Any]:
+    """Job과 Backend 호환 관계를 정의한 플랫폼 정책을 읽는다."""
+    capabilities = load_yaml(config_path)
+    if not isinstance(capabilities.get("backends"), Mapping):
+        raise ConfigError("capabilities.yaml에는 최상위 backends mapping이 필요합니다.")
+    return capabilities
+
+
+def validate_job_backend(
+    job_type: str,
+    backend_name: str,
+    capabilities: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    """플랫폼 정책에서 Job과 Backend 조합이 허용되는지 확인한다.
+
+    Args:
+        job_type: ``stt.foundation`` 같은 canonical Job 식별자이다.
+        backend_name: ``espnet`` 같은 canonical Backend 식별자이다.
+        capabilities: ``capabilities.yaml``에서 읽은 플랫폼 정책이다.
+
+    Raises:
+        ConfigError: Backend가 없거나 해당 Job을 지원하지 않을 때 발생한다.
+
+    Returns:
+        선택한 Backend의 capability 설정이다.
+    """
+    backends = capabilities.get("backends")
+    if not isinstance(backends, Mapping):
+        raise ConfigError("capabilities 설정에 backends mapping이 필요합니다.")
+
+    backend = backends.get(backend_name)
+    if not isinstance(backend, Mapping):
+        raise ConfigError(f"존재하지 않는 Backend입니다: {backend_name}")
+
+    jobs = backend.get("jobs")
+    if not isinstance(jobs, list) or not all(isinstance(job, str) for job in jobs):
+        raise ConfigError(f"Backend의 jobs 목록이 올바르지 않습니다: {backend_name}")
+    if job_type not in jobs:
+        raise ConfigError(
+            f"'{job_type}' Job에서는 '{backend_name}' Backend를 사용할 수 없습니다. "
+            "사용 가능한 Backend를 capabilities.yaml에서 확인하세요."
+        )
+    return backend
