@@ -1,6 +1,6 @@
 # ClearML Agent 구성
 
-Server B/C의 Agent는 호스트에 설치하고 Docker Mode로 실행한다. Agent 자체를 Docker Compose service로 띄우지 않는다. Agent는 Queue에서 Task를 가져와 Task에 지정된 Training Container를 실행하고, Git의 정확한 code revision을 가져와 NAS를 사용한다.
+일반 학습 Agent는 각 GPU Worker 호스트에 설치하고 Docker Mode로 실행한다. Server 호스트를 GPU Worker로 함께 사용할 때도 같은 방식으로 별도 Agent를 설치한다. Agent 자체를 Docker Compose service로 띄우지 않는다. Agent는 Queue에서 Task를 가져와 Task에 지정된 Training Container를 실행하고, Git의 정확한 code revision과 공유 storage를 사용한다.
 
 신규 운영 기준 OS는 Ubuntu Server 24.04 LTS를 권장한다. Agent 설치 전에 Docker Engine, NVIDIA Driver, NVIDIA Container Toolkit과 실제 GPU Container 실행을 먼저 검증한다.
 
@@ -15,7 +15,7 @@ Server B/C의 Agent는 호스트에 설치하고 Docker Mode로 실행한다. Ag
    source /opt/clearml-agent-venv/bin/activate
    ```
 
-3. Web UI에서 만든 Worker용 `CLEARML_API_ACCESS_KEY/SECRET_KEY`를 준비한다. Server A Compose의 `CLEARML_AGENT_ACCESS_KEY/SECRET_KEY`를 복사하지 않는다.
+3. Web UI에서 만든 Worker용 `CLEARML_API_ACCESS_KEY/SECRET_KEY`를 준비한다. Server Compose의 `CLEARML_AGENT_ACCESS_KEY/SECRET_KEY`를 복사하지 않는다.
 4. `agent.env.example`을 `/etc/ml-training-platform/agent.env`로 설치하고 Server endpoint, Queue, GPU, 공유 NFS 경로를 설정한다.
 5. 필요하면 `clearml.conf.example`을 `~/clearml.conf`로 복사한다. 실제 secret은 파일에 쓰지 않고 `agent.env` 환경변수로 주입한다.
 6. 환경을 점검하고 Agent를 시작한다.
@@ -47,6 +47,6 @@ foreground process라면 `Ctrl+C` 또는 process supervisor의 stop을 사용한
 
 스크립트는 `${ML_DATA_ROOT}`를 같은 container 경로에 read-only, `${ML_RESULT_ROOT}`를 read-write로 mount한다. 예제 기본값은 `/mnt/ml-data`와 `/mnt/ml-results`이며 실제 공유 storage 경로는 운영 `agent.env`에서 변경한다. Task가 별도 Docker 인자를 지정할 때 이 보안 속성을 약화시키지 않도록 운영 정책을 둔다.
 
-검증 후 `clearml-agent.service.example`을 기준으로 systemd에 등록한다. 자세한 OS, Docker, NVIDIA Container Toolkit, credential, systemd 절차는 [Agent 구축 문서](../../docs/03_ClearML_Agent_구축.md)를 따른다.
+검증 후 `clearml-agent.service.example`을 기준으로 systemd에 등록한다. 자세한 OS, Docker, NVIDIA Container Toolkit, credential, systemd 절차는 [Agent 구축 문서](../../docs/clearml/agent_setup.md)를 따른다.
 
 Private Repository라면 Agent가 clone할 SSH key 또는 HTTPS credential이 필요하다. 개인 secret을 Task, Git URL, Docker Image에 넣지 않는다. SSH agent forwarding 또는 호스트 Secret 관리 방식을 사용하고 권한을 해당 Repository의 read-only 범위로 제한한다.
