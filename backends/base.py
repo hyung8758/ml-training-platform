@@ -1,14 +1,13 @@
-# 모든 학습 Backend가 제공해야 하는 최소 실행 인터페이스를 정의한다.
-# 복잡한 Plugin 구조 없이 validate/build_command/run 세 단계만 공통 규약으로 사용한다.
+# 모든 학습 Backend가 따르는 최소 실행 인터페이스를 정의한다.
+# 복잡한 Plugin 계층 없이 검증, 명령 구성, 실행 세 단계만 사용한다.
 
-from __future__ import annotations
-
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Mapping, Protocol
+from typing import Any, Protocol
 
 
 class BackendRunner(Protocol):
-    """학습 Framework Runner가 구현해야 하는 최소 인터페이스이다."""
+    """Framework runner가 구현해야 하는 공통 인터페이스이다."""
 
     def validate(self, config: Mapping[str, Any]) -> None:
         """Backend 고유 설정을 실행 전에 검증한다."""

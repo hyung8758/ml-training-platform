@@ -1,8 +1,15 @@
 # LLaMA-Factory Backend
 
-LLM Pre-training/Fine-tuning을 LLaMA-Factory로 실행하고 싶은 기존 프로젝트를 수용하기 위한 선택 Backend이다. ms-swift를 기본 Backend로 두되 팀의 기존 LLaMA-Factory 코드도 같은 ClearML 운영 체계에 연결할 수 있게 한다.
+## 목적
 
-- Docker: `docker/llama-factory/`
-- 기본 Job: `language.llm.pretrain`, `language.llm.finetune`
-- Metric 정책: TensorBoard 출력을 우선 활용해 ClearML로 수집
-- 현재 상태: Runner 골격만 구현, 실제 YAML 변환/CLI 실행 미구현
+LLM Pre-training과 Fine-tuning Job을 LLaMA-Factory runtime으로 실행하기 위한 Backend다.
+
+## 정책
+
+- 예정 Job: `language.llm.pretrain`, `language.llm.finetune`
+- Docker Image: `ml-platform-llama-factory` (`docker/llama-factory/Dockerfile`)
+- Metric: Framework-native TensorBoard logging을 우선 사용하고 ClearML 자동 capture로 수집
+
+## 구현 범위
+
+현재 runner의 설정 validation과 `llamafactory-cli train` 명령 골격만 준비돼 있다. 실제 dataset/config 변환, 학습 실행, subprocess TensorBoard capture 검증, checkpoint와 model 등록은 향후 구현한다.

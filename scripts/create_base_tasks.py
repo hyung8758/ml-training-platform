@@ -1,7 +1,6 @@
-# 연구원이 ClearML Web UI에서 Clone할 기본 학습 Task를 생성한다.
-# Job과 Backend를 명시한 예제 설정을 사용하며 같은 이름의 Task는 중복 생성하지 않는다.
+# 연구원이 Web UI에서 Clone할 Job/Backend 조합의 ClearML Base Task를 생성한다.
+# 기본 네 종류와 선택형 LLaMA-Factory Task를 지원하며 중복 생성은 건너뛴다.
 
-from __future__ import annotations
 
 import argparse
 import os
@@ -12,19 +11,19 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-import yaml
-
+from jobs.common.config import load_yaml
 
 PROJECT_NAME = "ML Training Platform/Base Tasks"
 
 
 @dataclass(frozen=True)
 class TemplateSpec:
-    """Base Task 하나의 이름, 실행 파일, 설정 파일 및 tag를 정의한다."""
+    """Base Task 하나의 이름, 실행 파일, 설정 파일, Backend와 tag를 정의한다."""
 
     name: str
     entry_point: str
     config_path: str
+    backend_name: str
     tags: tuple[str, ...]
 
 
@@ -33,32 +32,51 @@ TEMPLATES = {
         "STT Foundation / ESPnet",
         "jobs/stt/foundation.py",
         "configs/stt/foundation.example.yaml",
-        ("stt", "foundation", "backend:espnet"),
+        "espnet",
+        ("stt", "foundation"),
     ),
     "stt-finetune-espnet": TemplateSpec(
         "STT Fine-tuning / ESPnet",
         "jobs/stt/finetune.py",
         "configs/stt/finetune.example.yaml",
-        ("stt", "finetune", "backend:espnet"),
+        "espnet",
+        ("stt", "finetune"),
     ),
     "embedding-finetune-ms-swift": TemplateSpec(
         "Embedding Fine-tuning / ms-swift",
         "jobs/language/embedding/finetune.py",
         "configs/language/embedding/finetune.example.yaml",
-        ("language", "embedding", "finetune", "backend:ms_swift"),
+        "ms_swift",
+        ("embedding", "finetune"),
     ),
     "llm-finetune-ms-swift": TemplateSpec(
         "LLM Fine-tuning / ms-swift",
         "jobs/language/llm/finetune.py",
         "configs/language/llm/finetune.example.yaml",
-        ("language", "llm", "finetune", "backend:ms_swift"),
+        "ms_swift",
+        ("llm", "finetune", "lora"),
     ),
     "llm-finetune-llama-factory": TemplateSpec(
         "LLM Fine-tuning / LLaMA-Factory",
         "jobs/language/llm/finetune.py",
         "configs/language/llm/finetune.example.yaml",
-        ("language", "llm", "finetune", "backend:llama_factory"),
+        "llama_factory",
+        ("llm", "finetune", "lora"),
     ),
+}
+
+DEFAULT_TEMPLATE_KEYS = (
+    "stt-foundation-espnet",
+    "stt-finetune-espnet",
+    "embedding-finetune-ms-swift",
+    "llm-finetune-ms-swift",
+)
+
+TEMPLATE_ALIASES = {
+    "espnet-foundation": "stt-foundation-espnet",
+    "espnet-finetune": "stt-finetune-espnet",
+    "embedding-finetune": "embedding-finetune-ms-swift",
+    "llm-finetune": "llm-finetune-ms-swift",
 }
 
 
@@ -66,8 +84,14 @@ def parse_args() -> argparse.Namespace:
     """생성할 Template 종류와 Repository URL 인자를 반환한다."""
     parser = argparse.ArgumentParser(description="ClearML Base Task 생성")
     selection = parser.add_mutually_exclusive_group(required=True)
-    selection.add_argument("--type", choices=sorted(TEMPLATES), help="생성할 Template 한 종류")
-    selection.add_argument("--all", action="store_true", help="모든 Template 생성")
+    selection.add_argument(
+        "--type",
+        choices=sorted(TEMPLATES.keys() | TEMPLATE_ALIASES.keys()),
+        help="생성할 Template 한 종류",
+    )
+    selection.add_argument(
+        "--all", action="store_true", help="기본 네 종류의 Template 생성"
+    )
     parser.add_argument("--repository", help="Agent가 clone할 Git Repository URL")
     return parser.parse_args()
 
@@ -79,13 +103,22 @@ def resolve_repository_url(explicit_url: str | None) -> str:
     elif os.environ.get("ML_TRAINING_REPOSITORY_URL"):
         url = os.environ["ML_TRAINING_REPOSITORY_URL"]
     else:
-        result = subprocess.run(["git", "config", "--get", "remote.origin.url"], check=False, capture_output=True, text=True)
+        result = subprocess.run(
+            ["git", "config", "--get", "remote.origin.url"],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
         url = result.stdout.strip()
     if not url:
-        raise RuntimeError("Git URL을 찾을 수 없습니다. --repository 또는 ML_TRAINING_REPOSITORY_URL을 지정하세요.")
+        raise RuntimeError(
+            "Git URL을 찾을 수 없습니다. --repository 또는 ML_TRAINING_REPOSITORY_URL을 지정하세요."
+        )
     parsed = urlsplit(url)
     if parsed.scheme in {"http", "https"} and (parsed.username or parsed.password):
-        raise RuntimeError("credential이 포함된 Git URL은 Base Task에 저장할 수 없습니다.")
+        raise RuntimeError(
+            "credential이 포함된 Git URL은 Base Task에 저장할 수 없습니다."
+        )
     return url
 
 
@@ -97,24 +130,18 @@ def find_existing_task(task_class: Any, name: str) -> Any | None:
     return None
 
 
-def _config_for_template(spec: TemplateSpec) -> dict[str, Any]:
-    """Template YAML을 읽고 Template tag가 요구하는 Backend override를 반영한다."""
-    with Path(spec.config_path).open("r", encoding="utf-8") as stream:
-        config = yaml.safe_load(stream)
-    backend_tags = [tag for tag in spec.tags if tag.startswith("backend:")]
-    if backend_tags:
-        config.setdefault("backend", {})["name"] = backend_tags[0].split(":", 1)[1]
-    return config
-
-
-def create_template(task_class: Any, key: str, spec: TemplateSpec, repository: str) -> str:
+def create_template(
+    task_class: Any, key: str, spec: TemplateSpec, repository: str
+) -> str:
     """ClearML에 draft Base Task 하나를 만들고 Task ID를 반환한다."""
     existing = find_existing_task(task_class, spec.name)
     if existing is not None:
         print(f"[건너뜀] 이미 존재합니다: {spec.name} ({existing.id})")
         return existing.id
 
-    config = _config_for_template(spec)
+    config_file = Path(spec.config_path)
+    config = load_yaml(config_file)
+    config["backend"]["name"] = spec.backend_name
     task = task_class.create(
         project_name=PROJECT_NAME,
         task_name=spec.name,
@@ -125,11 +152,17 @@ def create_template(task_class: Any, key: str, spec: TemplateSpec, repository: s
         argparse_args=[("--config", spec.config_path)],
         add_task_init_call=False,
     )
-    task.set_configuration_object(name="학습 설정", config_dict=config, description=f"기본 설정: {spec.config_path}")
-    task.add_tags(["base-task", "향후-구현", *spec.tags])
+    task.set_configuration_object(
+        name="학습 설정",
+        config_dict=config,
+        description=f"기본 설정: {spec.config_path}",
+    )
+    task.add_tags(
+        ["base-task", "향후-구현", f"backend:{spec.backend_name}", *spec.tags]
+    )
     task.set_comment(
-        "Web UI에서 Clone하여 Job 설정과 실행 Queue를 지정하는 Base Task입니다. "
-        "현재 실제 모델 학습 Backend 실행은 구현 단계 이전의 골격입니다."
+        "Web UI에서 Clone하여 설정과 실행 이미지를 지정하는 Base Task입니다. "
+        "현재 실제 모델 학습은 구현되지 않았습니다."
     )
     task.flush(wait_for_uploads=True)
     print(f"[생성] {key}: {spec.name} ({task.id})")
@@ -142,15 +175,23 @@ def main() -> int:
     try:
         from clearml import Task
     except ImportError:
-        print("[오류] ClearML SDK가 없습니다. `pip install -e .`를 실행하세요.", file=sys.stderr)
+        print(
+            "[오류] ClearML SDK가 없습니다. `pip install -e .`를 실행하세요.",
+            file=sys.stderr,
+        )
         return 1
 
     try:
         repository = resolve_repository_url(args.repository)
-        selected = TEMPLATES if args.all else {args.type: TEMPLATES[args.type]}
+        if args.all:
+            selected = {key: TEMPLATES[key] for key in DEFAULT_TEMPLATE_KEYS}
+        else:
+            template_key = TEMPLATE_ALIASES.get(args.type, args.type)
+            selected = {template_key: TEMPLATES[template_key]}
         for key, spec in selected.items():
             create_template(Task, key, spec, repository)
-    except Exception as error:
+    # CLI 경계에서는 Git, YAML, ClearML SDK 오류를 한글 메시지로 통일한다.
+    except Exception as error:  # noqa: BLE001
         print(f"[오류] Base Task 생성 실패: {error}", file=sys.stderr)
         return 1
     return 0

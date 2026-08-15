@@ -1,6 +1,6 @@
-# Reranker Fine-tuning을 향후 연결하기 위한 상위 설정 예시이다.
+# ms-swift Backend를 사용하는 Reranker Fine-tuning 설정 골격이다.
 experiment:
-  project: ML Training/Language/Reranker
+  project: ML Training/Reranker Fine-tuning
   name: reranker-finetune-example
 job:
   type: language.reranker.finetune
@@ -16,6 +16,7 @@ model:
 training:
   learning_rate: 0.00002
   epochs: 1
+  batch_size: 8
 resource:
   queue: <CLEARML_QUEUE_NAME>
   gpu_count: 1

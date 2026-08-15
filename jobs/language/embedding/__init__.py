@@ -1,2 +1,2 @@
-# Embedding 모델 Fine-tuning Job 진입점을 포함한다.
-# 실제 framework trainer 연동 전까지 실행 골격만 제공한다.
+# Embedding Fine-tuning과 Evaluation Job 진입점을 포함한다.
+# Framework별 실행은 Backend runner가 담당한다.

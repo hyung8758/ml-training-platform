@@ -1,8 +1,15 @@
 # ms-swift Backend
 
-LLM, Embedding, Reranker 계열 학습을 ms-swift와 연결하기 위한 기본 언어 모델 Backend이다. 현재는 플랫폼 Job 설정과 ms-swift 실행 사이의 Runner 골격만 제공한다.
+## 목적
 
-- Docker: `docker/ms-swift/`
-- 기본 Job: LLM Pre-training/Fine-tuning, Embedding Fine-tuning, Reranker Fine-tuning
-- Metric 정책: ms-swift의 TensorBoard 출력을 우선 활용해 ClearML로 수집
-- 현재 상태: 구조/검증만 구현, 실제 CLI 변환 및 학습 미구현
+LLM, Embedding, Reranker 계열 Job을 ms-swift runtime으로 실행하기 위한 Backend다.
+
+## 정책
+
+- 예정 Job: `language.llm.pretrain`, `language.llm.finetune`, `language.embedding.finetune`, `language.reranker.finetune`
+- Docker Image: `ml-platform-ms-swift` (`docker/ms-swift/Dockerfile`)
+- Metric: Framework-native TensorBoard logging을 우선 사용하고 ClearML 자동 capture로 수집
+
+## 구현 범위
+
+현재 runner의 설정 validation, LLM `swift pt`/`swift sft` 명령 골격과 Embedding/Reranker placeholder만 준비돼 있다. 실제 argument 변환, 학습 실행, subprocess TensorBoard capture 검증, checkpoint와 model 등록은 향후 구현한다.

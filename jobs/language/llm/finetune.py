@@ -1,14 +1,14 @@
-# LLM Fine-tuning Job의 공통 설정과 Backend 선택 흐름을 정의한다.
-# Framework-specific 명령은 backends/로 분리하고 이 파일은 Job의 설정·경로·ClearML 흐름만 담당한다.
+# LLM Fine-tuning Job의 설정, ClearML Task와 저장 경로를 준비한다.
+# ms-swift 등 Framework별 처리는 선택한 Backend runner에 위임한다.
 
-from __future__ import annotations
 
 import argparse
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from backends import load_backend_runner
 from jobs.common.config import (
+    ConfigError,
     load_capabilities,
     load_yaml,
     require_fields,
@@ -16,70 +16,83 @@ from jobs.common.config import (
     require_positive_number,
     validate_job_backend,
 )
-from jobs.common.paths import load_storage_roots, prepare_result_path, resolve_dataset_path
-from jobs.common.task import initialize_task
-from tracking.clearml import report_execution_plan
+from jobs.common.paths import (
+    load_storage_roots,
+    prepare_result_path,
+    resolve_dataset_path,
+)
+from jobs.common.task import execute_backend, initialize_task
 
-EXPECTED_JOB_TYPE = 'language.llm.finetune'
+JOB_TYPE = "language.llm.finetune"
 
 
-def load_configuration(config_path: str | Path, capabilities_path: str | Path) -> dict[str, Any]:
-    """Job YAML을 읽고 공통 필드와 Backend 호환 관계를 검증한다."""
-    config = load_yaml(config_path)
+def validate_configuration(
+    config: dict[str, Any], capabilities: Mapping[str, Any]
+) -> None:
+    """LLM Fine-tuning 공통 설정과 Backend 호환성을 검증한다."""
     require_fields(
         config,
         (
-            'experiment.project',
-            'experiment.name',
-            'job.type',
-            'backend.name',
-            'dataset.train_path',
-            'dataset.valid_path',
-            'model.name_or_path',
-            'training.method',
-            'training.max_seq_length',
-            'training.learning_rate',
-            'training.epochs',
-            'resource.queue',
-            'resource.gpu_count',
-            'output.root',
+            "experiment.project",
+            "experiment.name",
+            "job.type",
+            "backend.name",
+            "dataset.train_path",
+            "dataset.valid_path",
+            "model.name_or_path",
+            "training.method",
+            "training.max_seq_length",
+            "training.learning_rate",
+            "training.epochs",
+            "resource.queue",
+            "resource.gpu_count",
+            "output.root",
         ),
     )
-    require_job_type(config, EXPECTED_JOB_TYPE)
-    require_positive_number(config, "resource.gpu_count")
+    require_job_type(config, JOB_TYPE)
+    if config["training"]["method"] != "lora":
+        raise ConfigError("현재 예제 인터페이스는 training.method=lora만 허용합니다.")
     require_positive_number(config, "training.max_seq_length")
     require_positive_number(config, "training.learning_rate")
     require_positive_number(config, "training.epochs")
-    capabilities = load_capabilities(capabilities_path)
-    validate_job_backend(config["job"]["type"], config["backend"]["name"], capabilities)
+    require_positive_number(config, "resource.gpu_count")
+    validate_job_backend(JOB_TYPE, str(config["backend"]["name"]), capabilities)
+
+
+def load_configuration(
+    config_path: str | Path,
+    capabilities: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """LLM Fine-tuning YAML을 읽고 플랫폼 호환 정책까지 검증한다."""
+    config = load_yaml(config_path)
+    policies = load_capabilities() if capabilities is None else capabilities
+    validate_configuration(config, policies)
     return config
 
 
 def main() -> None:
-    """설정과 NAS를 검증한 뒤 선택한 Backend Runner에 실행을 위임한다."""
-    parser = argparse.ArgumentParser(description='LLM Fine-tuning 골격')
-    parser.add_argument("--config", required=True, help="학습 YAML 경로")
+    """Task와 NAS 경로를 준비한 뒤 선택한 Backend를 호출한다."""
+    parser = argparse.ArgumentParser(description="LLM LoRA Fine-tuning 골격")
+    parser.add_argument("--config", required=True)
     parser.add_argument("--storage-config", default="configs/platform/storage.yaml")
-    parser.add_argument("--capabilities-config", default="configs/platform/capabilities.yaml")
+    parser.add_argument(
+        "--capabilities-config", default="configs/platform/capabilities.yaml"
+    )
     args = parser.parse_args()
 
-    initial_config = load_configuration(args.config, args.capabilities_config)
-    backend_name = str(initial_config["backend"]["name"])
+    capabilities = load_capabilities(args.capabilities_config)
+    initial_config = load_configuration(args.config, capabilities)
     task, config = initialize_task(
-        initial_config,
-        config_path=args.config,
-        extra_tags=('language', 'llm', 'finetune') + (f"backend:{backend_name}",),
+        initial_config, config_path=args.config, extra_tags=("llm", "finetune", "lora")
     )
+    validate_configuration(config, capabilities)
+
     roots = load_storage_roots(args.storage_config)
     resolve_dataset_path(roots, config["dataset"]["train_path"])
     resolve_dataset_path(roots, config["dataset"]["valid_path"])
     output_dir = prepare_result_path(roots, config["output"]["root"])
 
-    runner = load_backend_runner(backend_name)
-    runner.validate(config)
-    command = runner.build_command(config, output_dir)
-    report_execution_plan(task, backend_name, command)
-    runner.run(command)
+    execute_backend(task, config, JOB_TYPE, output_dir)
 
 
 if __name__ == "__main__":

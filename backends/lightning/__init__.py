@@ -1,1 +1,2 @@
-# lightning 학습 Framework의 실행 Backend를 제공하는 패키지이다.
+# PyTorch Lightning Backend package이다.
+# 범용 학습 loop 연결 골격은 runner module에 둔다.

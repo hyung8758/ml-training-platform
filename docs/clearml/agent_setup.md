@@ -243,7 +243,7 @@ Unit은 `/etc/ml-training-platform/agent.env`를 읽고 `/opt/ml-training-platfo
 
 ## 13. Training Image와 Git
 
-Docker Image에는 CUDA, Python, PyTorch, ESPnet/Transformers 같은 실행 환경을 넣는다. 실제 학습 코드는 Task가 지정한 Git commit에서 가져온다. Image에 Repository 전체를 `COPY`하지 않는다.
+Docker Image에는 CUDA, Python, PyTorch와 ESPnet/ms-swift/LLaMA-Factory/Lightning 같은 Backend 실행 환경을 넣는다. 실제 학습 코드는 Task가 지정한 Git commit에서 가져온다. Image에 Repository 전체를 `COPY`하지 않는다.
 
 Public GitHub 단계에서는 platform code, Smoke Test와 `*.example.yaml`만 사용한다. Private GitLab 단계에서는 Worker의 read-only deploy key 또는 제한된 token을 Git 밖에서 관리한다.
 

@@ -1,4 +1,4 @@
-# STT Foundation 학습의 상위 설정 예시이다. 실제 ESPnet recipe 경로는 운영 환경에서 지정한다.
+# ESPnet Backend를 사용하는 STT Foundation Job의 상위 설정 예시이다.
 experiment:
   project: ML Training/STT
   name: ko-general-foundation-example

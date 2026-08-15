@@ -1,9 +1,10 @@
-# PyTorch Lightning 기반의 범용 Custom 모델 학습 환경을 위한 Docker Image 골격이다.
-# Base Image와 CUDA/PyTorch/Lightning 버전은 대상 모델과 GPU 환경 검증 뒤 고정한다.
+# 여러 Job을 PyTorch Lightning으로 실행할 학습 이미지 골격이다.
+# Foundation Image와 Framework 버전은 실제 호환성 검증 후 확정한다.
 ARG BASE_IMAGE
 FROM ${BASE_IMAGE}
 
 WORKDIR /workspace
 
-# Repository source는 이미지에 COPY하지 않고 ClearML Agent가 Task의 Git revision을 준비한다.
+# PyTorch Lightning은 검증한 버전 조합이 정해질 때 추가한다.
+# 학습 코드는 ClearML Agent가 Git에서 받고 secret은 이미지에 포함하지 않는다.
 RUN python -m pip install --no-cache-dir clearml PyYAML

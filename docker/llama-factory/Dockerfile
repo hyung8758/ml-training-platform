@@ -1,9 +1,10 @@
-# LLaMA-Factory 기반 LLM 학습 환경을 위한 Docker Image 골격이다.
-# Base Image와 CUDA/PyTorch/LLaMA-Factory 버전은 실제 학습 검증 뒤 고정한다.
+# LLM Job을 LLaMA-Factory로 실행할 학습 이미지 골격이다.
+# Foundation Image와 Framework 버전은 실제 호환성 검증 후 확정한다.
 ARG BASE_IMAGE
 FROM ${BASE_IMAGE}
 
 WORKDIR /workspace
 
-# Repository source는 이미지에 COPY하지 않고 ClearML Agent가 Task의 Git revision을 준비한다.
+# LLaMA-Factory는 검증한 버전 조합이 정해질 때 추가한다.
+# Repository source와 credential은 이미지에 포함하지 않고 ClearML Agent 실행 환경에서 제공한다.
 RUN python -m pip install --no-cache-dir clearml PyYAML

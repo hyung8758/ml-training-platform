@@ -1,7 +1,6 @@
 # YAML 로드, 필수 필드, 잘못된 경로와 환경변수 storage override를 검사한다.
 # ClearML Server나 PyTorch 없이 공통 모듈만 대상으로 실행한다.
 
-from __future__ import annotations
 
 from pathlib import Path
 
@@ -34,7 +33,9 @@ def test_load_valid_yaml(tmp_path: Path) -> None:
 
 def test_missing_required_field(tmp_path: Path) -> None:
     """필수 필드 누락 시 해당 경로가 포함된 오류가 발생하는지 확인한다."""
-    path = write_yaml(tmp_path / "missing.yaml", "experiment:\n  project: test-project\n")
+    path = write_yaml(
+        tmp_path / "missing.yaml", "experiment:\n  project: test-project\n"
+    )
     with pytest.raises(ConfigError, match="experiment.name"):
         require_fields(load_yaml(path), ("experiment.project", "experiment.name"))
 
@@ -76,4 +77,3 @@ def test_path_outside_root_is_rejected(tmp_path: Path) -> None:
     root.mkdir()
     with pytest.raises(PathValidationError, match="root를 벗어났습니다"):
         resolve_under_root(root, "../outside", create_directory=True)
-

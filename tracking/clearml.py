@@ -1,12 +1,18 @@
-# Framework 실행 계획과 공통 메시지를 ClearML Task에 기록하는 최소 helper이다.
-# Metric은 가능한 경우 Framework의 TensorBoard 출력을 ClearML이 capture하는 방향을 우선한다.
+# 선택한 Job, Backend와 실행 예정 명령을 ClearML에 기록한다.
+# Task 생성과 configuration 연결은 jobs/common/task.py가 담당한다.
 
-from __future__ import annotations
+from collections.abc import Iterable
+from typing import Any
 
-from typing import Any, Iterable
 
-
-def report_execution_plan(task: Any, backend_name: str, command: Iterable[str]) -> None:
-    """선택 Backend와 실행 예정 명령을 ClearML Console에 기록한다."""
-    rendered = " ".join(str(part) for part in command)
-    task.get_logger().report_text(f"Backend={backend_name}, 실행 예정 명령: {rendered}")
+def report_execution_plan(
+    task: Any,
+    job_type: str,
+    backend_name: str,
+    command: Iterable[str],
+) -> None:
+    """실행할 Job, Backend와 command를 ClearML Console에 기록한다."""
+    rendered_command = " ".join(str(part) for part in command)
+    task.get_logger().report_text(
+        f"Job={job_type}, Backend={backend_name}, 실행 예정 명령: {rendered_command}"
+    )

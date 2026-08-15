@@ -1,6 +1,6 @@
-# 28B 이하 LLM Fine-tuning의 공통 상위 설정 예시이며 기본 Backend는 ms-swift이다.
+# ms-swift Backend를 사용하는 28B 이하 LLM Fine-tuning 설정 예시이다.
 experiment:
-  project: ML Training/Language/LLM
+  project: ML Training/LLM Fine-tuning
   name: llm-lora-finetune-example
 job:
   type: language.llm.finetune

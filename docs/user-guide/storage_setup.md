@@ -184,4 +184,3 @@ MinIO는 사내 infrastructure에서 운영하는 S3-compatible object storage�
 - Training Container 안에서도 같은 경로와 권한이 확인된다.
 - Dataset, Result, ClearML Server DB와 backup의 책임이 분리돼 있다.
 - 용량, quota, backup과 정리 담당자가 정해져 있다.
-

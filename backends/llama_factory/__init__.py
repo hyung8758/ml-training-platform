@@ -1,1 +1,2 @@
-# llama_factory 학습 Framework의 실행 Backend를 제공하는 패키지이다.
+# LLaMA-Factory Backend package이다.
+# LLM 학습 명령 골격은 runner module에 둔다.

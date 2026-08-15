@@ -62,35 +62,22 @@ Docker Image와 Git 코드를 분리한다. Image 변경은 느리고 검증이 
 
 NAS의 dataset은 원칙적으로 read-only, 결과 root는 해당 Worker/프로젝트에 필요한 범위만 write 가능하게 mount한다. 같은 설정이 모든 Worker에서 재현되도록 호스트와 container 모두 동일한 절대 경로를 사용한다.
 
+## Job과 Backend
+
+Job은 STT Foundation이나 LLM Fine-tuning처럼 무엇을 실행하는지 정의한다. Backend는 ESPnet, ms-swift, LLaMA-Factory, Lightning처럼 어떤 Framework 명령으로 실행하는지 정의한다. Job은 Task와 dataset/output을 준비하고, Framework-specific command는 Backend runner가 구성한다.
+
+허용 조합은 `configs/platform/capabilities.yaml` 하나에서 관리한다. Python validation은 Backend의 존재와 해당 Job 포함 여부만 검사하며 별도 Plugin Manager나 Registry 계층을 두지 않는다.
+
+Metric은 Framework-native TensorBoard logging과 ClearML 자동 capture를 우선한다. subprocess로 실행되는 Framework의 event가 실제 Task에 연결되는지는 Backend별 Smoke Test가 필요하며, 문제가 확인되기 전에는 별도 parser를 구현하지 않는다.
+
 ## Task 실행 순서
 
 1. 연구원이 Base Task를 Clone해 configuration, Git revision, Training Image와 Queue를 검토한다.
 2. Enqueue된 Task를 해당 Queue를 수신하는 Agent가 가져간다.
 3. Agent가 지정 GPU를 할당하고 Training Container를 시작한다.
 4. Agent가 Git code를 준비하고 dependency 환경을 재현한다.
-5. Job이 configuration과 NAS 경로를 검증하고 학습을 실행한다.
+5. Job이 configuration, NAS 경로와 Backend 호환성을 검증하고 Backend runner를 호출한다.
 6. console과 metric은 ClearML API로, dataset 및 큰 checkpoint/result는 NAS로 보낸다.
 7. 작은 artifact 또는 NAS 결과를 설명하는 metadata를 Task에 등록한다.
 
-현재 1~6의 기반은 Smoke Test로 확인할 수 있다. ESPnet/Embedding/LLM의 실제 trainer, checkpoint와 model registry 연결은 **향후 구현**이다.
-
-
-## Job과 Backend 분리 원칙
-
-플랫폼은 `jobs`와 `backends`를 두 축으로 관리한다. `jobs`는 STT Foundation, LLM Fine-tuning처럼 **무엇을 수행하는가**를 정의하고, `backends`는 ESPnet, ms-swift처럼 **어떤 Framework로 실행하는가**를 담당한다.
-
-잘못된 조합을 막기 위해 복잡한 Plugin 시스템 대신 `configs/platform/capabilities.yaml` 하나를 정책 파일로 사용한다. 실행 직전에 `job.type`과 `backend.name` 조합을 한 번 검증하고, 통과한 경우에만 해당 Backend Runner를 로드한다.
-
-```text
-Job Config
-  ├─ job.type = language.llm.finetune
-  └─ backend.name = ms_swift
-          │
-          ▼
-capabilities.yaml 검증
-          │
-          ▼
-backends/ms_swift/runner.py
-```
-
-Metric은 가능한 경우 Framework-native TensorBoard 출력을 사용하고 ClearML을 최종 실험 관리 화면으로 둔다. 별도 TensorBoard parser는 실제 자동 capture 문제가 확인된 경우에만 추가한다.
+현재 1~6의 기반은 Smoke Test로 확인할 수 있다. 네 Backend의 실제 trainer, 평가, checkpoint와 model registry 연결은 **향후 구현**이다.
