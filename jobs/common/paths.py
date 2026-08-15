@@ -1,12 +1,11 @@
 # 환경변수와 storage.yaml을 바탕으로 NAS 경로를 구성한다.
 # 데이터와 결과가 허용된 root 밖을 가리키는 실수를 방지한다.
 
-from __future__ import annotations
 
 import os
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Mapping
 
 from jobs.common.config import ConfigError, load_yaml, require_fields
 
@@ -37,7 +36,7 @@ def _absolute_root(value: str, variable_name: str) -> Path:
 
 
 def load_storage_roots(
-    config_path: str | Path = "configs/common/storage.yaml",
+    config_path: str | Path = "configs/platform/storage.yaml",
     environ: Mapping[str, str] | None = None,
 ) -> StorageRoots:
     """storage.yaml을 읽고 환경변수 우선순위로 root를 결정한다.
@@ -100,7 +99,9 @@ def resolve_under_root(
         try:
             resolved.mkdir(parents=True, exist_ok=True)
         except OSError as error:
-            raise PathValidationError(f"결과 디렉터리를 만들 수 없습니다: {resolved} ({error})") from error
+            raise PathValidationError(
+                f"결과 디렉터리를 만들 수 없습니다: {resolved} ({error})"
+            ) from error
     return resolved
 
 

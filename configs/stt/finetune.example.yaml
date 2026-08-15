@@ -1,7 +1,11 @@
-# 기존 ESPnet 모델을 시작점으로 사용하는 Fine-tuning 상위 설정 예시이다.
+# ESPnet Backend로 기존 STT 모델을 조정하는 Fine-tuning 설정 예시이다.
 experiment:
-  project: ML Training/ESPnet Fine-tuning
+  project: ML Training/STT
   name: ko-domain-a-finetune-example
+job:
+  type: stt.finetune
+backend:
+  name: espnet
 dataset:
   name: ko_domain_a
   version: v1
@@ -10,7 +14,6 @@ dataset:
 base_model:
   task_id: <CLEARML_BASE_TASK_ID_OR_MODEL_IDENTIFIER>
 model:
-  framework: espnet
   architecture: conformer
 training:
   config_path: <ESPNET_RECIPE_CONFIG_PATH>

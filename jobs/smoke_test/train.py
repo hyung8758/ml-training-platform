@@ -1,7 +1,6 @@
 # 다운로드 없는 작은 PyTorch 학습으로 ClearML과 Worker 연결을 점검한다.
 # CPU에서도 실행되며 metric, console, artifact, NAS 결과 기록을 확인한다.
 
-from __future__ import annotations
 
 import argparse
 import json
@@ -21,10 +20,12 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="ClearML 학습 경로 Smoke Test")
     parser.add_argument("--epochs", type=int, default=3, help="짧은 학습 반복 횟수")
     parser.add_argument("--learning-rate", type=float, default=0.05, help="학습률")
-    parser.add_argument("--output", default="smoke-test/latest", help="ML_RESULT_ROOT 하위 경로")
+    parser.add_argument(
+        "--output", default="smoke-test/latest", help="ML_RESULT_ROOT 하위 경로"
+    )
     parser.add_argument(
         "--storage-config",
-        default="configs/common/storage.yaml",
+        default="configs/platform/storage.yaml",
         help="공통 storage 설정 경로",
     )
     return parser.parse_args()
@@ -82,7 +83,9 @@ def train(config: dict[str, Any], task: Any, output_dir: Path) -> dict[str, Any]
 
     # 외부 데이터셋 상태가 연결 검사를 방해하지 않도록 고정 seed 난수를 사용한다.
     torch.manual_seed(42)
-    features = torch.randn(int(training["samples"]), int(training["input_size"]), device=device)
+    features = torch.randn(
+        int(training["samples"]), int(training["input_size"]), device=device
+    )
     target = features.sum(dim=1, keepdim=True) * 0.5
     model = torch.nn.Sequential(
         torch.nn.Linear(int(training["input_size"]), 16),
@@ -101,7 +104,9 @@ def train(config: dict[str, Any], task: Any, output_dir: Path) -> dict[str, Any]
         optimizer.step()
         final_loss = float(loss.detach().cpu().item())
         print(f"[Smoke Test] epoch={epoch}, loss={final_loss:.6f}", flush=True)
-        task.get_logger().report_scalar("학습", "loss", value=final_loss, iteration=epoch)
+        task.get_logger().report_scalar(
+            "학습", "loss", value=final_loss, iteration=epoch
+        )
 
     model_path = output_dir / "smoke_model.pt"
     torch.save(model.state_dict(), model_path)
@@ -139,4 +144,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

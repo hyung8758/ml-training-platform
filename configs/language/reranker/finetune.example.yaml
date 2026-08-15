@@ -1,0 +1,24 @@
+# ms-swift Backend를 사용하는 Reranker Fine-tuning 설정 골격이다.
+experiment:
+  project: ML Training/Reranker Fine-tuning
+  name: reranker-finetune-example
+job:
+  type: language.reranker.finetune
+backend:
+  name: ms_swift
+dataset:
+  name: reranker_pairs
+  version: v1
+  train_path: /mnt/ml-data/reranker/reranker_pairs/v1/train
+  valid_path: /mnt/ml-data/reranker/reranker_pairs/v1/valid
+model:
+  name_or_path: <BASE_MODEL_IDENTIFIER>
+training:
+  learning_rate: 0.00002
+  epochs: 1
+  batch_size: 8
+resource:
+  queue: <CLEARML_QUEUE_NAME>
+  gpu_count: 1
+output:
+  root: reranker/finetune/example

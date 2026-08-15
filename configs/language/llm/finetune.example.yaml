@@ -1,14 +1,17 @@
-# 28B 이하 LLM Fine-tuning의 최소 상위 설정 예시이다.
+# ms-swift Backend를 사용하는 28B 이하 LLM Fine-tuning 설정 예시이다.
 experiment:
   project: ML Training/LLM Fine-tuning
   name: llm-lora-finetune-example
+job:
+  type: language.llm.finetune
+backend:
+  name: ms_swift
 dataset:
   name: instruction_data
   version: v1
   train_path: /mnt/ml-data/llm/instruction_data/v1/train
   valid_path: /mnt/ml-data/llm/instruction_data/v1/valid
 model:
-  framework: transformers
   name_or_path: <BASE_MODEL_IDENTIFIER>
 training:
   method: lora
