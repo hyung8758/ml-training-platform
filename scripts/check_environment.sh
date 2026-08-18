@@ -71,6 +71,14 @@ else
   error "ML_DATA_ROOT 디렉터리가 없습니다: ${ML_DATA_ROOT}"
 fi
 
+if [[ -z "${ML_SHARED_ROOT:-}" ]]; then
+  warn "ML_SHARED_ROOT가 설정되지 않았습니다. ESPnet wav.scp의 절대 음원 경로를 컨테이너에서 읽을 수 있는지 별도 확인해야 합니다."
+elif [[ -d "${ML_SHARED_ROOT}" ]]; then
+  ok "공유 원본 root 확인: ${ML_SHARED_ROOT}"
+else
+  error "ML_SHARED_ROOT 디렉터리가 없습니다: ${ML_SHARED_ROOT}"
+fi
+
 if [[ -z "${ML_RESULT_ROOT:-}" ]]; then
   warn "ML_RESULT_ROOT가 설정되지 않았습니다. 기본 storage.yaml 값이 사용됩니다."
 elif [[ -d "${ML_RESULT_ROOT}" ]]; then

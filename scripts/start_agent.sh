@@ -23,6 +23,9 @@ set -a
 source "${AGENT_ENV_FILE}"
 set +a
 
+# wav.scp가 /mnt/DB01의 원본 음원을 절대 경로로 참조하므로 같은 경로를 보존한다.
+ML_SHARED_ROOT=${ML_SHARED_ROOT:-/mnt/DB01}
+
 for command_name in clearml-agent docker nvidia-smi python3; do
   command -v "${command_name}" >/dev/null 2>&1 || fail "필수 명령을 찾을 수 없습니다: ${command_name}"
 done
@@ -41,8 +44,9 @@ done
 
 [[ -d "${ML_DATA_ROOT}" ]] || fail "ML_DATA_ROOT가 존재하지 않습니다: ${ML_DATA_ROOT}"
 [[ -d "${ML_RESULT_ROOT}" ]] || fail "ML_RESULT_ROOT가 존재하지 않습니다: ${ML_RESULT_ROOT}"
+[[ -d "${ML_SHARED_ROOT}" ]] || fail "ML_SHARED_ROOT가 존재하지 않습니다: ${ML_SHARED_ROOT}"
 [[ -w "${ML_RESULT_ROOT}" ]] || fail "ML_RESULT_ROOT에 쓰기 권한이 없습니다: ${ML_RESULT_ROOT}"
-[[ "${ML_DATA_ROOT}${ML_RESULT_ROOT}" != *[[:space:]]* ]] || fail "NAS 경로에는 공백을 사용할 수 없습니다."
+[[ "${ML_SHARED_ROOT}${ML_DATA_ROOT}${ML_RESULT_ROOT}" != *[[:space:]]* ]] || fail "NAS 경로에는 공백을 사용할 수 없습니다."
 
 # 설치 버전의 도움말에 실제 사용할 옵션이 모두 있는지 실행 직전에 확인한다.
 AGENT_HELP="$(clearml-agent daemon --help 2>&1)"
@@ -68,8 +72,8 @@ then
   fail "Queue 조회에 실패했습니다. endpoint, credential, Queue 이름을 확인하세요."
 fi
 
-# Task container가 호스트와 같은 NAS 경로 및 root 환경변수를 보도록 강제한다.
-NAS_DOCKER_ARGS="-v ${ML_DATA_ROOT}:${ML_DATA_ROOT}:ro -v ${ML_RESULT_ROOT}:${ML_RESULT_ROOT}:rw -e ML_DATA_ROOT=${ML_DATA_ROOT} -e ML_RESULT_ROOT=${ML_RESULT_ROOT}"
+# 원본 음원 전체는 읽기 전용으로, ClearML 결과 하위 경로만 쓰기 가능하게 연결한다.
+NAS_DOCKER_ARGS="-v ${ML_SHARED_ROOT}:${ML_SHARED_ROOT}:ro -v ${ML_RESULT_ROOT}:${ML_RESULT_ROOT}:rw -e ML_SHARED_ROOT=${ML_SHARED_ROOT} -e ML_DATA_ROOT=${ML_DATA_ROOT} -e ML_RESULT_ROOT=${ML_RESULT_ROOT}"
 export CLEARML_AGENT_EXTRA_DOCKER_ARGS="${CLEARML_AGENT_EXTRA_DOCKER_ARGS:-} ${NAS_DOCKER_ARGS}"
 
 printf '[정보] ClearML Agent 시작: queue=%s, gpus=%s\n' "${CLEARML_QUEUE}" "${CLEARML_AGENT_GPU}"
@@ -77,4 +81,3 @@ exec clearml-agent daemon \
   --queue "${CLEARML_QUEUE}" \
   --gpus "${CLEARML_AGENT_GPU}" \
   --docker
-
