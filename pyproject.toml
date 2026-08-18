@@ -14,8 +14,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Smoke Test의 PyTorch는 학습 이미지 또는 이 선택 의존성으로 설치한다.
-smoke = ["torch"]
 dev = ["pytest", "ruff"]
 
 [tool.setuptools.packages.find]
