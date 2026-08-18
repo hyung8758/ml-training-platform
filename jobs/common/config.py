@@ -121,7 +121,7 @@ def validate_job_backend(
     """플랫폼 정책에서 Job과 Backend 조합이 허용되는지 확인한다.
 
     Args:
-        job_type: ``stt.foundation`` 같은 canonical Job 식별자이다.
+        job_type: ``stt.train`` 같은 canonical Job 식별자이다.
         backend_name: ``espnet`` 같은 canonical Backend 식별자이다.
         capabilities: ``capabilities.yaml``에서 읽은 플랫폼 정책이다.
 

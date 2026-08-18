@@ -20,7 +20,7 @@ def capabilities() -> dict[str, object]:
 @pytest.mark.parametrize(
     ("job_type", "backend_name"),
     (
-        ("stt.foundation", "espnet"),
+        ("stt.train", "espnet"),
         ("language.llm.finetune", "ms_swift"),
         ("language.llm.finetune", "llama_factory"),
         ("language.embedding.finetune", "ms_swift"),
@@ -38,8 +38,8 @@ def test_supported_job_backend(
 @pytest.mark.parametrize(
     ("job_type", "backend_name"),
     (
-        ("stt.foundation", "llama_factory"),
-        ("stt.foundation", "ms_swift"),
+        ("stt.train", "llama_factory"),
+        ("stt.train", "ms_swift"),
         ("language.embedding.finetune", "espnet"),
     ),
 )
@@ -56,4 +56,4 @@ def test_unsupported_job_backend(
 def test_unknown_backend(capabilities: dict[str, object]) -> None:
     """존재하지 않는 Backend 이름을 명확히 거부하는지 확인한다."""
     with pytest.raises(ConfigError, match="존재하지 않는 Backend"):
-        validate_job_backend("stt.foundation", "unknown_backend", capabilities)
+        validate_job_backend("stt.train", "unknown_backend", capabilities)

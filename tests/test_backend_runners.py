@@ -32,8 +32,7 @@ def test_every_backend_has_runner(backend_name: str) -> None:
 @pytest.mark.parametrize(
     ("config_path", "expected_command"),
     (
-        ("configs/stt/foundation.example.yaml", "<ESPNET_TRAIN_COMMAND>"),
-        ("configs/stt/finetune.example.yaml", "<ESPNET_FINETUNE_COMMAND>"),
+        ("configs/stt/train.example.yaml", "env"),
         ("configs/language/llm/finetune.example.yaml", "swift"),
         (
             "configs/language/embedding/finetune.example.yaml",
@@ -54,6 +53,24 @@ def test_default_job_builds_backend_command(
     runner.validate(config)
     command = runner.build_command(config, tmp_path)
     assert command[0] == expected_command
+
+
+def test_espnet_train_adds_pretrained_model_only_when_configured(
+    tmp_path: Path,
+) -> None:
+    """STT Train의 checkpoint 설정이 ESPnet 환경변수로 전달되는지 확인한다."""
+    scratch = load_yaml("configs/stt/train.example.yaml")
+    runner = load_backend_runner("espnet")
+    scratch_command = runner.build_command(scratch, tmp_path)
+    assert "ESPNET_PRETRAINED_MODEL=" in scratch_command
+    assert "ESPNET_IGNORE_INIT_MISMATCH=false" in scratch_command
+
+    finetune = deepcopy(scratch)
+    finetune["initialization"]["pretrained_model"] = "/mnt/checkpoints/model.pth"
+    finetune["initialization"]["ignore_init_mismatch"] = True
+    finetune_command = runner.build_command(finetune, tmp_path)
+    assert "ESPNET_PRETRAINED_MODEL=/mnt/checkpoints/model.pth" in finetune_command
+    assert "ESPNET_IGNORE_INIT_MISMATCH=true" in finetune_command
 
 
 def test_llm_backend_override_is_revalidated() -> None:

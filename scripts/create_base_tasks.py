@@ -1,5 +1,5 @@
 # 연구원이 Web UI에서 Clone할 Job/Backend 조합의 ClearML Base Task를 생성한다.
-# 기본 네 종류와 선택형 LLaMA-Factory Task를 지원하며 중복 생성은 건너뛴다.
+# 기본 세 종류와 선택형 LLaMA-Factory Task를 지원하며 중복 생성은 건너뛴다.
 
 
 import argparse
@@ -25,22 +25,17 @@ class TemplateSpec:
     config_path: str
     backend_name: str
     tags: tuple[str, ...]
+    implemented: bool = False
 
 
 TEMPLATES = {
-    "stt-foundation-espnet": TemplateSpec(
-        "STT Foundation / ESPnet",
-        "jobs/stt/foundation.py",
-        "configs/stt/foundation.example.yaml",
+    "stt-train-espnet": TemplateSpec(
+        "STT Train / ESPnet",
+        "jobs/stt/train.py",
+        "configs/stt/train.example.yaml",
         "espnet",
-        ("stt", "foundation"),
-    ),
-    "stt-finetune-espnet": TemplateSpec(
-        "STT Fine-tuning / ESPnet",
-        "jobs/stt/finetune.py",
-        "configs/stt/finetune.example.yaml",
-        "espnet",
-        ("stt", "finetune"),
+        ("stt", "train"),
+        True,
     ),
     "embedding-finetune-ms-swift": TemplateSpec(
         "Embedding Fine-tuning / ms-swift",
@@ -66,15 +61,15 @@ TEMPLATES = {
 }
 
 DEFAULT_TEMPLATE_KEYS = (
-    "stt-foundation-espnet",
-    "stt-finetune-espnet",
+    "stt-train-espnet",
     "embedding-finetune-ms-swift",
     "llm-finetune-ms-swift",
 )
 
 TEMPLATE_ALIASES = {
-    "espnet-foundation": "stt-foundation-espnet",
-    "espnet-finetune": "stt-finetune-espnet",
+    "espnet-train": "stt-train-espnet",
+    "espnet-foundation": "stt-train-espnet",
+    "espnet-finetune": "stt-train-espnet",
     "embedding-finetune": "embedding-finetune-ms-swift",
     "llm-finetune": "llm-finetune-ms-swift",
 }
@@ -90,7 +85,7 @@ def parse_args() -> argparse.Namespace:
         help="생성할 Template 한 종류",
     )
     selection.add_argument(
-        "--all", action="store_true", help="기본 네 종류의 Template 생성"
+        "--all", action="store_true", help="기본 세 종류의 Template 생성"
     )
     parser.add_argument("--repository", help="Agent가 clone할 Git Repository URL")
     return parser.parse_args()
@@ -157,12 +152,18 @@ def create_template(
         config_dict=config,
         description=f"기본 설정: {spec.config_path}",
     )
+    status_tags = [] if spec.implemented else ["향후-구현"]
     task.add_tags(
-        ["base-task", "향후-구현", f"backend:{spec.backend_name}", *spec.tags]
+        ["base-task", *status_tags, f"backend:{spec.backend_name}", *spec.tags]
+    )
+    status_comment = (
+        "ESPnet training 실행 경로가 구현되어 있습니다."
+        if spec.implemented
+        else "현재 실제 모델 학습은 구현되지 않았습니다."
     )
     task.set_comment(
         "Web UI에서 Clone하여 설정과 실행 이미지를 지정하는 Base Task입니다. "
-        "현재 실제 모델 학습은 구현되지 않았습니다."
+        + status_comment
     )
     task.flush(wait_for_uploads=True)
     print(f"[생성] {key}: {spec.name} ({task.id})")
