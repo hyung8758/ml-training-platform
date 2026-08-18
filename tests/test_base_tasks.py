@@ -13,15 +13,16 @@ from scripts.create_base_tasks import (
 
 
 def test_default_templates_exclude_optional_llama_factory() -> None:
-    """--all의 기본 범위가 합의된 네 종류인지 확인한다."""
-    assert len(DEFAULT_TEMPLATE_KEYS) == 4
+    """--all의 기본 범위가 통합된 STT를 포함한 세 종류인지 확인한다."""
+    assert len(DEFAULT_TEMPLATE_KEYS) == 3
     assert "llm-finetune-llama-factory" not in DEFAULT_TEMPLATE_KEYS
     assert set(DEFAULT_TEMPLATE_KEYS) <= TEMPLATES.keys()
 
 
 def test_legacy_template_names_resolve_to_canonical_names() -> None:
     """기존 CLI 이름이 새 canonical 이름으로 연결되는지 확인한다."""
-    assert TEMPLATE_ALIASES["espnet-foundation"] == "stt-foundation-espnet"
+    assert TEMPLATE_ALIASES["espnet-foundation"] == "stt-train-espnet"
+    assert TEMPLATE_ALIASES["espnet-finetune"] == "stt-train-espnet"
     assert TEMPLATE_ALIASES["llm-finetune"] == "llm-finetune-ms-swift"
 
 

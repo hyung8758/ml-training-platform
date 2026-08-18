@@ -1,0 +1,13 @@
+diff --git a/espnet2/tasks/abs_task.py b/espnet2/tasks/abs_task.py
+index 5b4aaf9c61..40cc2c9e63 100644
+--- a/espnet2/tasks/abs_task.py
++++ b/espnet2/tasks/abs_task.py
+@@ -96,7 +96,7 @@ try:
+ except Exception:
+     wandb = None
+ 
+-    from torch.multiprocessing.spawn import ProcessContext
++from torch.multiprocessing.spawn import ProcessContext
+ 
+ 
+ optim_classes = dict(

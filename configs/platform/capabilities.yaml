@@ -4,8 +4,7 @@
 backends:
   espnet:
     jobs:
-      - stt.foundation
-      - stt.finetune
+      - stt.train
       - stt.evaluate
     docker:
       image: ml-platform-espnet
@@ -28,8 +27,7 @@ backends:
 
   lightning:
     jobs:
-      - stt.foundation
-      - stt.finetune
+      - stt.train
       - language.llm.finetune
       - language.embedding.finetune
     docker:

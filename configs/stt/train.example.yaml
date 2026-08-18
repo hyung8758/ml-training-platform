@@ -1,0 +1,44 @@
+# ESPnet scratch training과 fine-tuning에 공통으로 사용하는 STT Job 예시이다.
+experiment:
+  project: ML Training/STT
+  name: ko-period5-1-noiseaug-char-smoke
+job:
+  type: stt.train
+backend:
+  name: espnet
+dataset:
+  name: ko-period5-1-small
+  version: v1
+  language: ko
+  sample_rate: 8000
+  train_path: stt/ko/8k/datasets/period5-1-small/v1/train
+  valid_path: stt/ko/8k/datasets/period5-1-small/v1/valid
+  train_set: small_period5-1_train
+  valid_set: small_period5-1_train_dev
+  test_sets: []
+recipe:
+  espnet_root: /opt/espnet
+  source: /opt/espnet/egs2/TEMPLATE/asr1
+  stage: 3
+  stop_stage: 11
+  skip_stages: "5 6 7 8 9"
+tokenizer:
+  type: char
+  policy: pinned
+  path: /mnt/DB01/clearml/ml-data/stt/ko/8k/tokenizers/char/kr-2604-period5-1/v1
+initialization:
+  # null이면 scratch training, checkpoint 경로이면 fine-tuning이다.
+  pretrained_model: null
+  ignore_init_mismatch: false
+training:
+  config_path: conf/namz_training/base/train_asr_transformer_period5.yaml
+  max_epoch: 1
+  batch_size: 64
+augmentation:
+  rir_scp: /mnt/DB01/clearml/ml-data/stt/shared/8k/augmentations/rir/a198/v1/wav.scp
+  noise_scp: /mnt/DB01/clearml/ml-data/stt/shared/8k/augmentations/noise/original2/v1/wav.scp
+resource:
+  queue: gpu-sage1
+  gpu_count: 1
+output:
+  root: stt/ko/8k/train/period5-1
